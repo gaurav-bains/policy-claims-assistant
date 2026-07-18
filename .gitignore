@@ -1,0 +1,15 @@
+# .NET build output
+bin/
+obj/
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+
+# Secrets & environment files
+.env
+appsettings.Development.json
+*.user
+
+# OS files
+.DS_Store
