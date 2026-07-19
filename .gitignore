@@ -11,5 +11,8 @@ obj/
 appsettings.Development.json
 *.user
 
+# Docker volumes / local data directories
+.pgdata/
+
 # OS files
 .DS_Store

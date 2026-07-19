@@ -1,0 +1,6 @@
+@SemanticSearchAssistant_HostAddress = http://localhost:5224
+
+GET {{SemanticSearchAssistant_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
