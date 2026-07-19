@@ -1,6 +1,6 @@
 # Docs Search
 
-Basic keyword search over policy documents. Simple case-insensitive substring matching - no ranking, no fuzzy matching, no external dependencies.
+Basic keyword search over RSCM docs. Simple case-insensitive substring matching - no ranking, no fuzzy matching, no external dependencies.
 
 ## Run locally
 
