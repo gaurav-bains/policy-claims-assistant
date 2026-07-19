@@ -1,9 +1,11 @@
 using SemanticSearchAssistant.Ingestion;
+using SemanticSearchAssistant.Search;
+
+EnvFile.Load(Directory.GetCurrentDirectory());
 
 if (args.Length > 0 && args[0] == "ingest")
 {
     var contentRootPath = Directory.GetCurrentDirectory();
-    EnvFile.Load(contentRootPath);
 
     var configuration = new ConfigurationBuilder()
         .SetBasePath(contentRootPath)
@@ -23,7 +25,26 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+var embeddingOptions = builder.Configuration.GetSection(EmbeddingOptions.SectionName).Get<EmbeddingOptions>()
+    ?? new EmbeddingOptions();
+var llmOptions = builder.Configuration.GetSection(LlmOptions.SectionName).Get<LlmOptions>()
+    ?? new LlmOptions();
+var retrievalOptions = builder.Configuration.GetSection(RetrievalOptions.SectionName).Get<RetrievalOptions>()
+    ?? new RetrievalOptions();
+var connectionString = builder.Configuration.GetConnectionString("Postgres")
+    ?? throw new InvalidOperationException("Missing ConnectionStrings:Postgres configuration.");
+
+builder.Services.AddSingleton(embeddingOptions);
+builder.Services.AddSingleton(llmOptions);
+builder.Services.AddSingleton(retrievalOptions);
+builder.Services.AddSingleton(EmbeddingGeneratorFactory.Create(embeddingOptions));
+builder.Services.AddSingleton(ChatClientFactory.Create(llmOptions));
+builder.Services.AddSingleton(new ChunkStore(connectionString));
+builder.Services.AddSingleton<SearchService>();
+
 var app = builder.Build();
+
+await app.Services.GetRequiredService<ChunkStore>().EnsureSchemaAsync();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -34,29 +55,17 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
+app.MapPost("/api/search", async (SearchRequest request, SearchService searchService) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    if (string.IsNullOrWhiteSpace(request.Query))
+    {
+        return Results.BadRequest(new { error = "Query must not be empty." });
+    }
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
+    var response = await searchService.SearchAsync(request.Query);
+    return Results.Ok(response);
 })
-.WithName("GetWeatherForecast")
+.WithName("Search")
 .WithOpenApi();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

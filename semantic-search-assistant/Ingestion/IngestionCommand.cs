@@ -1,6 +1,4 @@
-using System.Net.Security;
 using Microsoft.Extensions.AI;
-using Microsoft.SemanticKernel;
 
 namespace SemanticSearchAssistant.Ingestion;
 
@@ -12,15 +10,6 @@ public static class IngestionCommand
             ?? new IngestionOptions();
         var embeddingOptions = configuration.GetSection(EmbeddingOptions.SectionName).Get<EmbeddingOptions>()
             ?? new EmbeddingOptions();
-
-        var apiKey = string.IsNullOrWhiteSpace(embeddingOptions.ApiKey)
-            ? Environment.GetEnvironmentVariable("OPENAI_API_KEY")
-            : embeddingOptions.ApiKey;
-        if (string.IsNullOrWhiteSpace(apiKey))
-        {
-            throw new InvalidOperationException(
-                "No embedding API key configured. Set Embedding:ApiKey in appsettings, or the OPENAI_API_KEY environment variable.");
-        }
 
         var connectionString = configuration.GetConnectionString("Postgres")
             ?? throw new InvalidOperationException("Missing ConnectionStrings:Postgres configuration.");
@@ -40,28 +29,7 @@ public static class IngestionCommand
             return;
         }
 
-        var builder = Kernel.CreateBuilder();
-
-        HttpClient? httpClient = null;
-        if (embeddingOptions.DisableCertificateRevocationCheck)
-        {
-            var handler = new SocketsHttpHandler
-            {
-                SslOptions = new SslClientAuthenticationOptions
-                {
-                    CertificateRevocationCheckMode = System.Security.Cryptography.X509Certificates.X509RevocationMode.NoCheck
-                }
-            };
-            httpClient = new HttpClient(handler);
-        }
-
-        builder.AddOpenAIEmbeddingGenerator(
-            embeddingOptions.ModelId,
-            apiKey,
-            dimensions: embeddingOptions.Dimensions,
-            httpClient: httpClient);
-        var kernel = builder.Build();
-        var embeddingGenerator = kernel.GetRequiredService<IEmbeddingGenerator<string, Embedding<float>>>();
+        var embeddingGenerator = EmbeddingGeneratorFactory.Create(embeddingOptions);
 
         var chunkStore = new ChunkStore(connectionString);
         await chunkStore.EnsureSchemaAsync();
