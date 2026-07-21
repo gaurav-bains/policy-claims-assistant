@@ -87,7 +87,7 @@ curl -X POST http://localhost:8000/api/search \
   "answer": "Employees must complete workplace hazard training within 30 days of hire [Chunk 0].",
   "citations": [
     {
-      "source": "RSCM Volume II.pdf",
+      "source": "rscm_volume_ii-pdf-en.pdf",
       "chunkIndex": 0,
       "excerpt": "All employees must complete workplace hazard training within 30 days of hire..."
     }
