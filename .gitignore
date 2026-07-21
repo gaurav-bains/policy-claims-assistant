@@ -14,5 +14,10 @@ appsettings.Development.json
 # Docker volumes / local data directories
 .pgdata/
 
+# Python
+__pycache__/
+*.pyc
+.venv/
+
 # OS files
 .DS_Store

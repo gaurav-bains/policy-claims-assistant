@@ -1,0 +1,21 @@
+[project]
+name = "langgraph-assistant"
+version = "0.1.0"
+description = "LangGraph/LangChain-based RAG assistant over policy documents - Python alternative to semantic-search-assistant"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "langgraph>=0.2",
+    "langchain>=0.3",
+    "langchain-openai>=0.2",
+    "asyncpg>=0.29",
+    "pgvector>=0.3",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
