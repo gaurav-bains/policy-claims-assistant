@@ -72,7 +72,7 @@ State schema: `question`, `retrieved_chunks`, `answer`, `citations`, `has_ground
 
 ## `POST /api/search`
 
-Same request/response contract as `docs-search` and `semantic-search-assistant`, so all implementations are interchangeable behind the same interface. Examples below call the Python service directly (port 8000); the C# proxy (port 5247) behaves identically for the success and grounding cases, and additionally enforces its own query-length limit and returns `502` if the Python service is down.
+Same request/response contract as `semantic-search-assistant`, so the two are interchangeable behind the same interface. (`docs-search` predates this contract and is not interchangeable with either - see its README.) Examples below call the Python service directly (port 8000); the C# proxy (port 5247) behaves identically for the success and grounding cases, and additionally enforces its own query-length limit and returns `502` if the Python service is down.
 
 **Grounded example:**
 

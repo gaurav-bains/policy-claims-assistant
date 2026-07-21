@@ -39,7 +39,7 @@ Embeds the query, retrieves the top matching chunks from Postgres, and asks the 
 **Grounded example:**
 
 ```bash
-curl -X POST http://localhost:5210/api/search \
+curl -X POST http://localhost:5224/api/search \
   -H "Content-Type: application/json" \
   -d '{"query": "How soon must employees complete hazard training after hire?"}'
 ```
@@ -61,7 +61,7 @@ curl -X POST http://localhost:5210/api/search \
 **No relevant context found** (nothing in the retrieved chunks clears the similarity threshold, so the LLM isn't called and no answer is hallucinated):
 
 ```bash
-curl -X POST http://localhost:5210/api/search \
+curl -X POST http://localhost:5224/api/search \
   -H "Content-Type: application/json" \
   -d '{"query": "What is the company policy on parental leave?"}'
 ```
@@ -77,7 +77,7 @@ curl -X POST http://localhost:5210/api/search \
 **Empty query** returns `400 Bad Request`:
 
 ```bash
-curl -X POST http://localhost:5210/api/search \
+curl -X POST http://localhost:5224/api/search \
   -H "Content-Type: application/json" \
   -d '{"query": ""}'
 ```
