@@ -39,6 +39,8 @@ pip install -e .
 
 Set `OPENAI_API_KEY` (env var or `.env`) - it's used for both embeddings and generation, and must match the embedding model/dimensions `semantic-search-assistant` ingested with (`text-embedding-3-small`, 1536 dimensions by default; override via `EMBEDDING_MODEL` / `EMBEDDING_DIMENSIONS`).
 
+Optionally, enable [LangSmith](https://smith.langchain.com) tracing by adding the required `LANGSMITH_*` variables to your local `.env` (gitignored and untracked, same as `OPENAI_API_KEY` above). See [Observability](#observability-python-service) below for which variables those are and what tracing gets you.
+
 ```bash
 uvicorn app.main:app --reload
 ```
@@ -69,6 +71,24 @@ State schema: `question`, `retrieved_chunks`, `answer`, `citations`, `has_ground
 
 - **`retrieve`**: embeds the question with the same embedding model used at ingestion, runs a cosine-similarity search against `document_chunks` (top 5), and keeps only chunks at or above the similarity threshold.
 - **`generate`**: if no chunks cleared the threshold, skips the LLM entirely and returns the "not enough information" answer (no hallucination). Otherwise builds a grounded prompt from the retrieved chunks - answer only from context, cite chunks inline like `[Chunk 0]`, admit when the context is insufficient - and calls the LLM.
+
+## Observability (Python service)
+
+Tracing uses LangChain/LangGraph's built-in [LangSmith](https://smith.langchain.com) integration - no custom instrumentation code. Set these in your local `.env` (gitignored, not committed) to turn it on:
+
+- `LANGSMITH_TRACING` - set to `true` to enable tracing
+- `LANGSMITH_API_KEY` - your LangSmith API key
+- `LANGSMITH_ENDPOINT` - `https://api.smith.langchain.com`
+- `LANGSMITH_PROJECT` - `policy-claims-assistant`
+
+When set, every `rag_graph.ainvoke(...)` call in `app/main.py` is automatically traced, since `retrieve_node` and `generate_node` are plain LangGraph nodes and use standard `langchain-openai` wrappers (`OpenAIEmbeddings.aembed_query`, `ChatOpenAI.ainvoke`) rather than raw HTTP calls. If the env vars are unset, tracing is a no-op and nothing is sent.
+
+Each `/api/search` request shows up in the LangSmith `policy-claims-assistant` project as a run tree (verified against a live trace):
+
+- A root `LangGraph` run for the graph invocation, with the incoming `question` and final `answer`/`citations` output, plus overall latency.
+- A child run for the **`retrieve`** node. Note: unlike `ChatOpenAI`, the `OpenAIEmbeddings.aembed_query()` call it makes does *not* get its own nested span - `langchain-openai`'s embeddings client doesn't participate in LangChain's callback/tracing system the way chat models do, so the embedding call's latency is folded into the `retrieve` node's duration rather than shown separately. Same for the pgvector similarity search in `app/db.py`, which is plain `asyncpg` SQL, not a LangChain call.
+- A child run for the **`generate`** node, and - only on the grounded path, where an LLM call actually happens - a nested **`ChatOpenAI`** run under it with the full prompt, completion, latency, and token usage (`input_tokens` / `output_tokens` / `total_tokens` in `usage_metadata`). On the ungrounded path (no chunks cleared the similarity threshold), `generate` returns the "not enough information" answer directly and no `ChatOpenAI` run appears, since the LLM is never called.
+- Per-run and per-project latency and token-usage aggregates in the LangSmith UI.
 
 ## `POST /api/search`
 
